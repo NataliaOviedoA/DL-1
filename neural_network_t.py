@@ -72,7 +72,7 @@ class neuralnetwork:
         # Cross-entropy loss function
         l = [0.,0.]
         for i in range(2):
-            l[i] = - (Y * math.log(self.y[i]) + ((1 - Y)* math.log(1 - self.y[i])))    # the error
+            l[i] = - (Y[i] * math.log(self.y[i]) + ((1 - Y[i])* math.log(1 - self.y[i])))    # the error
             loss += l[i]
         return loss
 
@@ -81,7 +81,7 @@ class neuralnetwork:
         # dl/dy includes softmax and loss function derivate
         dl_dy = [0.,0.]
         for i in range(2):
-            dl = - (Y/self.y[i]) + ((1 - Y)/ (1 - self.y[i]))   # the error
+            dl = - (Y[i] / self.y[i]) + ((1 - Y[i])/ (1 - self.y[i]))   # the error
             dsoftmax = self.y[i] * (1 - self.y[i])
             dl_dy[i] = dl * dsoftmax
         # Derivates for dv and dh
@@ -107,24 +107,36 @@ class neuralnetwork:
                 dl_dw[i][j] = dl_dk[j] * X[i] 
             dl_db[j] = dl_dk[j]
         
-        return dl_dw, dl_dv
+        return dl_dw, dl_db, dl_dv, dl_db2
         
-    def update_parameters(self, dl_dw, dl_dv, alpha):
+    def update_parameters(self, dl_dw, dl_db, dl_dv, dl_db2, alpha):
         for i in range(2):
             for j in range(3):
                 self.weight_1[i][j] -= alpha * dl_dw[i][j] 
                 self.weight_2[j][i] -= alpha * dl_dv[j][i]
+            self.bias_1[i] -= alpha * dl_db[i] 
+        for i in range(2):
+            self.bias_2[i] -= alpha * dl_db2[i]
+        # Should de bias also change here? Or not?
 
+    def one_hot_vector(self, Y):
+        vector = [0,0]
+        if Y == 1:
+            vector[0] = 1
+        elif Y == 0:
+            vector[1] = 1
+        return vector
     
     # gradient_descent
     def gradient_descent(self, X, Y, alpha, iterations):
         for i in range(iterations):
             loss = self.forward(X, Y)
-            dl_dw, dl_dv = self.backward(X, Y)
-            self.update_parameters(dl_dw, dl_dv ,alpha)
-            if i % 100 == 0:
+            dl_dw, dl_db, dl_dv, dl_db2 = self.backward(X, Y)
+            self.update_parameters(dl_dw, dl_db, dl_dv, dl_db2, alpha)
+            if i % 10 == 0:
                  print("Loss ",  i, " = ", loss)
 
 (xtrain, ytrain), (xval, yval), num_cls = data.load_synth()
 model = neuralnetwork()
-model.gradient_descent(xtrain[4,:], ytrain[4], 0.50, 1000)
+Y = model.one_hot_vector(ytrain[0])
+model.gradient_descent(xtrain[2,:], Y, 0.5, 100)
